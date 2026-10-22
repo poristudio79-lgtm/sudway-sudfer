@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Subway Surfers 3D Runner", page_icon="🏃", layout="wide")
+st.set_page_config(page_title="Head Soccer 2D Battle", page_icon="⚽", layout="wide")
 
 st.markdown("""
     <style>
@@ -10,452 +10,364 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-SUBWAY_3D_HTML = """
+HEAD_SOCCER_HTML = """
 <!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-  body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial Black', -apple-system, sans-serif; }
-  #canvas-container { position: relative; width: 100vw; height: 100vh; max-width: 900px; max-height: 550px; margin: 0 auto; overflow: hidden; background: #000; }
+  body, html { width: 100%; height: 100%; overflow: hidden; background: #070b12; font-family: 'Arial Black', sans-serif; display: flex; justify-content: center; align-items: center; }
+  
+  #gameContainer { position: relative; width: 900px; height: 500px; background: linear-gradient(to bottom, #1a2a6c, #b21f1f, #fdbb2d); border-radius: 12px; overflow: hidden; border: 4px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
   canvas { display: block; width: 100%; height: 100%; }
 
-  /* HUD Top Bar */
-  #hud { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 10; }
-  .pause-btn { width: 44px; height: 44px; background: #0088cc; border: 3px solid #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; pointer-events: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-  .pause-btn::before, .pause-btn::after { content: ''; width: 6px; height: 18px; background: #fff; margin: 0 2px; border-radius: 2px; }
-  .stats-container { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-  .score-box { display: flex; align-items: center; gap: 8px; }
-  .multiplier-tag { background: #ffaa00; color: #fff; font-size: 16px; font-weight: 900; padding: 2px 8px; border-radius: 6px; border: 2px solid #fff; text-shadow: 1px 1px 2px #000; }
-  .score-val { color: #fff; font-size: 26px; font-weight: 900; letter-spacing: 2px; text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; }
-  .coins-box { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 20px; border: 2px solid rgba(255,255,255,0.3); }
-  .coin-icon { width: 22px; height: 22px; background: gold; border-radius: 50%; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #b8860b; font-weight: bold; box-shadow: 0 0 5px gold; }
-  .coin-val { color: #fff; font-size: 18px; font-weight: 900; text-shadow: 1px 1px 2px #000; }
+  /* UI HUD */
+  #hud { position: absolute; top: 15px; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; z-index: 10; pointer-events: none; }
+  .score-board { background: rgba(0, 0, 0, 0.6); padding: 8px 25px; border-radius: 20px; border: 2px solid #fff; color: #fff; font-size: 28px; font-weight: 900; letter-spacing: 3px; text-shadow: 2px 2px 0 #000; }
+  .timer-board { background: rgba(255, 215, 0, 0.8); color: #000; padding: 6px 18px; border-radius: 15px; border: 2px solid #fff; font-size: 22px; font-weight: 900; }
 
-  /* Powerup HUD Active Timers */
-  #active-powerups { position: absolute; top: 70px; left: 12px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 10; }
-  .pwr-bar-item { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 12px; border: 1.5px solid #fff; }
-  .pwr-ico { font-size: 16px; }
-  .pwr-progress-bg { width: 60px; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
-  .pwr-progress-fill { height: 100%; width: 100%; background: #00ffcc; transition: width 0.1s linear; }
+  /* Power Bar HUD */
+  .power-container { position: absolute; bottom: 15px; width: 220px; height: 16px; background: rgba(0,0,0,0.6); border: 2px solid #fff; border-radius: 10px; overflow: hidden; z-index: 10; }
+  #p1PowerBar { left: 30px; }
+  #p2PowerBar { right: 30px; }
+  .power-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ff9800, #ffeb3b); transition: width 0.1s; }
 
-  /* Hoverboard Button HUD */
-  #board-hud { position: absolute; bottom: 20px; left: 20px; pointer-events: auto; z-index: 10; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.5); padding: 8px 14px; border-radius: 25px; border: 2px solid #00ffff; cursor: pointer; }
-  .board-icon { font-size: 22px; }
-  .board-text { color: #fff; font-size: 14px; font-weight: bold; }
-
-  /* UI Screens */
-  .overlay-screen { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; transition: opacity 0.3s ease; }
+  /* Screens */
+  .screen { position: absolute; inset: 0; background: rgba(10, 15, 25, 0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; transition: opacity 0.3s; }
   .hidden { display: none !important; }
 
-  #start-screen h1 { font-size: 42px; color: #ffea00; text-shadow: 3px 3px 0 #d32f2f, -3px -3px 0 #d32f2f, 3px -3px 0 #d32f2f, -3px 3px 0 #d32f2f; margin-bottom: 8px; font-style: italic; }
-  #start-screen p { color: #fff; font-size: 16px; margin-bottom: 25px; text-shadow: 1px 1px 2px #000; }
-  .tap-to-play-btn { background: linear-gradient(135deg, #00e676, #00b0ff); color: #fff; font-size: 24px; font-weight: 900; padding: 14px 45px; border-radius: 30px; border: 4px solid #fff; box-shadow: 0 8px 25px rgba(0,230,118,0.6); cursor: pointer; transform: scale(1); animation: pulse 1.5s infinite; }
-  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-
-  /* GAME OVER NOTEBOOK OVERLAY */
-  .notebook-container { position: relative; width: 340px; background: #e0e0e0; border-radius: 12px; padding: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); border: 3px solid #ccc; background-image: repeating-linear-gradient(#e0e0e0, #e0e0e0 24px, #a0c0e0 25px); display: flex; flex-direction: column; align-items: center; }
-  .notebook-rings { position: absolute; top: -14px; left: 20px; right: 20px; display: flex; justify-content: space-between; }
-  .ring { width: 12px; height: 26px; background: linear-gradient(#aaa, #fff, #888); border-radius: 6px; border: 1px solid #555; }
+  h1 { font-size: 42px; color: #ffeb3b; text-shadow: 3px 3px 0 #ff5722, -3px -3px 0 #ff5722; margin-bottom: 10px; text-align: center; }
+  p { color: #fff; font-size: 16px; margin-bottom: 25px; text-align: center; }
   
-  .nb-header { display: flex; justify-content: space-between; width: 100%; margin-top: 10px; padding: 0 10px; }
-  .nb-stat { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 900; color: #333; }
-  
-  .nb-score-title { font-size: 20px; color: #0055aa; margin-top: 5px; font-weight: 900; font-style: italic; }
-  .nb-score-banner { background: linear-gradient(#0066cc, #003388); color: #fff; width: 100%; text-align: center; font-size: 32px; font-weight: 900; padding: 6px 0; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px dashed #fff; margin: 4px 0 10px; }
-  
-  .nb-double-btn { background: linear-gradient(#00c853, #00897b); border: 2px solid #fff; border-radius: 8px; width: 100%; padding: 8px; color: #fff; font-size: 14px; font-weight: 900; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-  
-  .nb-leaderboard { width: 100%; background: #fff; border-radius: 8px; margin-top: 10px; padding: 6px; border: 1px solid #bbb; }
-  .lb-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; font-size: 11px; font-weight: 900; border-bottom: 1px solid #eee; }
-  .lb-row:last-child { border-bottom: none; }
-  .lb-rank { width: 16px; color: #555; }
-  .lb-name { flex: 1; margin-left: 6px; color: #222; }
-  .lb-score { color: #000; }
-
-  .nb-bottom-nav { display: flex; gap: 12px; margin-top: 14px; width: 100%; justify-content: center; }
-  .nb-btn { flex: 1; padding: 10px; border-radius: 10px; border: 2px solid #fff; font-size: 16px; font-weight: 900; color: #fff; cursor: pointer; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-  .btn-home { background: linear-gradient(#757575, #424242); }
-  .btn-play { background: linear-gradient(#76ff03, #33691e); color: #000; }
+  .btn-group { display: flex; gap: 15px; }
+  .menu-btn { background: linear-gradient(135deg, #00e676, #00b0ff); color: #fff; font-size: 20px; font-weight: 900; padding: 12px 30px; border-radius: 25px; border: 3px solid #fff; cursor: pointer; box-shadow: 0 6px 20px rgba(0,230,118,0.5); transition: transform 0.2s; }
+  .menu-btn:hover { transform: scale(1.08); }
+  .btn-p2 { background: linear-gradient(135deg, #ff3d00, #ffea00); box-shadow: 0 6px 20px rgba(255,61,0,0.5); }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
-<div id="canvas-container">
-  <!-- HUD Top -->
+<div id="gameContainer">
+  <!-- HUD -->
   <div id="hud">
-    <div class="pause-btn" id="pauseBtn"></div>
-    <div class="stats-container">
-      <div class="score-box">
-        <span class="multiplier-tag" id="multTag">x3</span>
-        <span class="score-val" id="scoreDisplay">000000</span>
-      </div>
-      <div class="coins-box">
-        <div class="coin-icon">★</div>
-        <span class="coin-val" id="coinDisplay">0</span>
-      </div>
+    <div class="score-board" id="scoreP1">0 - 0</div>
+    <div class="timer-board" id="timerDisplay">60</div>
+    <div class="score-board" id="scoreP2">0 - 0</div>
+  </div>
+
+  <div class="power-container" id="p1PowerBar"><div class="power-fill" id="p1Fill"></div></div>
+  <div class="power-container" id="p2PowerBar"><div class="power-fill" id="p2Fill"></div></div>
+
+  <!-- CANVAS GAME 2D -->
+  <canvas id="gameCanvas" width="900" height="500"></canvas>
+
+  <!-- START MENU -->
+  <div id="menuScreen" class="screen">
+    <h1>⚽ HEAD SOCCER 2D</h1>
+    <p>Dùng đầu & chân sút tung lưới đối thủ!<br><b>P1:</b> A/D (Di chuyển), W (Nhảy), S (Sút), Space (Tuyệt chiêu)<br><b>P2:</b> Phím Mũi Tên (Di chuyển/Nhảy/Sút)</p>
+    <div class="btn-group">
+      <button class="menu-btn" onclick="startGame(1)">1 PLAYER (VS AI)</button>
+      <button class="menu-btn btn-p2" onclick="startGame(2)">2 PLAYERS</button>
     </div>
   </div>
 
-  <!-- Active Powerups List -->
-  <div id="active-powerups"></div>
-
-  <!-- Board HUD -->
-  <div id="board-hud" onclick="activateBoard()">
-    <span class="board-icon">🛹</span>
-    <span class="board-text" id="boardCountText">VÁN TRƯỢT (x3)</span>
-  </div>
-
-  <!-- Start Screen -->
-  <div id="start-screen" class="overlay-screen">
-    <h1>SUBWAY SURFERS</h1>
-    <p>Né tránh chướng ngại vật & Thu thập xu!</p>
-    <button class="tap-to-play-btn" onclick="startGame()">BẮT ĐẦU</button>
-  </div>
-
-  <!-- Game Over Notebook Screen -->
-  <div id="gameover-screen" class="overlay-screen hidden">
-    <div class="notebook-container">
-      <div class="notebook-rings">
-        <div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div>
-      </div>
-      
-      <div class="nb-header">
-        <div class="nb-stat">🔑 0</div>
-        <div class="nb-stat">🪙 <span id="nbTotalCoins">0</span></div>
-      </div>
-
-      <div class="nb-score-title">★ Score ★</div>
-      <div class="nb-score-banner" id="nbFinalScore">0</div>
-      <div style="font-size:12px; font-weight:bold; color:#ff6d00; margin-bottom:6px;">🪙 <span id="nbRunCoins">0</span> Coins Collected</div>
-
-      <div class="nb-double-btn">
-        <span>Free Double Up!</span>
-        <span style="background:#ffea00; color:#000; padding:2px 8px; border-radius:4px; font-size:12px;">▶</span>
-      </div>
-
-      <div class="nb-leaderboard">
-        <div class="lb-row"><span class="lb-rank">1</span><span class="lb-name">Yutani</span><span class="lb-score">999999</span></div>
-        <div class="lb-row"><span class="lb-rank">2</span><span class="lb-name">Spike</span><span class="lb-score">810312</span></div>
-        <div class="lb-row"><span class="lb-rank">3</span><span class="lb-name">Fresh</span><span class="lb-score">555555</span></div>
-        <div class="lb-row"><span class="lb-rank">4</span><span class="lb-name">Tricky</span><span class="lb-score">345678</span></div>
-        <div class="lb-row"><span class="lb-rank">5</span><span class="lb-name">Ninja</span><span class="lb-score">123456</span></div>
-      </div>
-
-      <div class="nb-bottom-nav">
-        <div class="nb-btn btn-home" onclick="resetToMenu()">MENU</div>
-        <div class="nb-btn btn-play" onclick="startGame()">PLAY</div>
-      </div>
-    </div>
+  <!-- GAME OVER SCREEN -->
+  <div id="overScreen" class="screen hidden">
+    <h1 id="winnerText">TRẬN ĐẤU KẾT THÚC</h1>
+    <p id="finalScoreText" style="font-size: 24px; color: #ffeb3b; margin: 15px 0;">Tỷ số: 0 - 0</p>
+    <button class="menu-btn" onclick="location.reload()">CHƠI LẠI</button>
   </div>
 </div>
 
 <script>
-// --- GAME STATE ---
-let gameState = 'START'; // START, INTRO, RUNNING, CAUGHT, GAMEOVER
-let score = 0, coins = 0, multiplier = 3;
-let runTime = 0;
-let boardsCount = 3;
-let boardActive = false, boardTime = 0;
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-// Lanes: -1 (Left), 0 (Center), 1 (Right)
-let currentLane = 0;
-const laneX = [-2.2, 0, 2.2];
-let playerPos = { x: 0, y: 0, z: 0 };
-let playerVelY = 0;
-let isJumping = false, isSliding = false;
-let slideTimer = 0;
+let gameMode = 1; // 1: VS AI, 2: 2 Players
+let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
+let timeLeft = 60;
+let gameTimerInterval = null;
 
-// Active Powerups: { magnet: 0, sneakers: 0, jetpack: 0, mult2x: 0 }
-let powerups = { magnet: 0, sneakers: 0, jetpack: 0, mult2x: 0 };
+// Game Objects
+const groundY = 410;
 
-// THREE.JS SETUP
-const container = document.getElementById('canvas-container');
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a151d);
-scene.fog = new THREE.FogExp2(0x0a151d, 0.025);
+let p1 = {
+  x: 200, y: groundY, vx: 0, vy: 0, r: 35, 
+  color: '#00e676', hatColor: '#1b5e20', score: 0, power: 0, facing: 1
+};
 
-const camera = new THREE.PerspectiveCamera(60, 900 / 550, 0.1, 100);
-camera.position.set(0, 3.2, 5.5);
+let p2 = {
+  x: 700, y: groundY, vx: 0, vy: 0, r: 35, 
+  color: '#ff3d00', hatColor: '#b71c1c', score: 0, power: 0, facing: -1
+};
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(container.clientWidth, container.clientHeight);
-renderer.shadowMap.enabled = true;
-container.appendChild(renderer.domElement);
+let ball = {
+  x: 450, y: 250, vx: 0, vy: 0, r: 20
+};
 
-// LIGHTS
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-scene.add(ambientLight);
+// Input Controls
+let keys = {};
+window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-const dirLight = new THREE.DirectionalLight(0xfffaed, 0.8);
-dirLight.position.set(5, 15, 5);
-dirLight.castShadow = true;
-scene.add(dirLight);
+function startGame(mode) {
+  gameMode = mode;
+  gameState = 'PLAYING';
+  document.getElementById('menuScreen').classList.add('hidden');
+  
+  p1.score = 0; p2.score = 0; p1.power = 0; p2.power = 0;
+  resetPositions();
 
-// --- ENVIRONMENT BUILDER ---
-const tunnelGroup = new THREE.Group();
-scene.add(tunnelGroup);
+  timeLeft = 60;
+  if(gameTimerInterval) clearInterval(gameTimerInterval);
+  gameTimerInterval = setInterval(() => {
+    timeLeft--;
+    document.getElementById('timerDisplay').innerText = timeLeft;
+    if (timeLeft <= 0) {
+      clearInterval(gameTimerInterval);
+      endGame();
+    }
+  }, 1000);
+}
 
-function createTunnelSegment(zPos) {
-  const seg = new THREE.Group();
-  seg.position.z = zPos;
+function resetPositions() {
+  p1.x = 200; p1.y = groundY; p1.vx = 0; p1.vy = 0;
+  p2.x = 700; p2.y = groundY; p2.vx = 0; p2.vy = 0;
+  ball.x = 450; ball.y = 180; ball.vx = 0; ball.vy = -4;
+}
 
-  // Ground Turquoise Track
-  const groundGeo = new THREE.PlaneGeometry(8, 20);
-  const groundMat = new THREE.MeshStandardMaterial({ color: 0x009988, roughness: 0.5 });
-  const ground = new THREE.Mesh(groundGeo, groundMat);
-  ground.rotation.x = -Math.PI / 2;
-  seg.add(ground);
+function endGame() {
+  gameState = 'GAMEOVER';
+  document.getElementById('overScreen').classList.remove('hidden');
+  let text = "HÒA NHAU!";
+  if (p1.score > p2.score) text = "🏆 PLAYER 1 (XANH) CHIẾN THẮNG!";
+  else if (p2.score > p1.score) text = gameMode === 1 ? "🤖 MÁY (AI) CHIẾN THẮNG!" : "🏆 PLAYER 2 (ĐỎ) CHIẾN THẮNG!";
+  document.getElementById('winnerText').innerText = text;
+  document.getElementById('finalScoreText').innerText = `Tỷ số: ${p1.score} - ${p2.score}`;
+}
 
-  // Rails
-  [-2.2, 0, 2.2].forEach(rx => {
-    const railGeo = new THREE.BoxGeometry(0.1, 0.08, 20);
-    const railMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
-    const r1 = new THREE.Mesh(railGeo, railMat); r1.position.set(rx - 0.4, 0.04, 0);
-    const r2 = new THREE.Mesh(railGeo, railMat); r2.position.set(rx + 0.4, 0.04, 0);
-    seg.add(r1, r2);
+// --- GAME LOOP UPDATE ---
+function update() {
+  if (gameState !== 'PLAYING') return;
+
+  // --- PLAYER 1 CONTROLS (WASD + Space) ---
+  if (keys['a']) { p1.vx = -5; p1.facing = -1; }
+  else if (keys['d']) { p1.vx = 5; p1.facing = 1; }
+  else { p1.vx *= 0.8; }
+
+  if (keys['w'] && p1.y >= groundY) { p1.vy = -14; }
+  
+  // Power Shot P1 (Space)
+  if (keys[' ' ] && p1.power >= 100) {
+    p1.power = 0;
+    if (Math.hypot(ball.x - p1.x, ball.y - p1.y) < 70) {
+      ball.vx = 18 * p1.facing;
+      ball.vy = -12;
+    }
+  }
+
+  // --- PLAYER 2 CONTROLS ---
+  if (gameMode === 2) {
+    if (keys['arrowleft']) { p2.vx = -5; p2.facing = -1; }
+    else if (keys['arrowright']) { p2.vx = 5; p2.facing = 1; }
+    else { p2.vx *= 0.8; }
+
+    if (keys['arrowup'] && p2.y >= groundY) { p2.vy = -14; }
+    
+    if (keys['enter'] && p2.power >= 100) {
+      p2.power = 0;
+      if (Math.hypot(ball.x - p2.x, ball.y - p2.y) < 70) {
+        ball.vx = 18 * p2.facing;
+        ball.vy = -12;
+      }
+    }
+  } else {
+    // AI LOGIC
+    let targetX = ball.x + (ball.vx * 5);
+    if (targetX < 480) targetX = 520; // Giữ sân nhà
+    if (p2.x < targetX - 15) { p2.vx = 4.2; p2.facing = -1; }
+    else if (p2.x > targetX + 15) { p2.vx = -4.2; p2.facing = 1; }
+    else { p2.vx *= 0.8; }
+
+    if (ball.y < 300 && ball.x > 450 && p2.y >= groundY && Math.random() < 0.08) {
+      p2.vy = -13;
+    }
+  }
+
+  // Physics Gravity for Players
+  [p1, p2].forEach(p => {
+    p.vy += 0.6; // Trọng lực
+    p.y += p.vy;
+    p.x += p.vx;
+
+    if (p.y > groundY) { p.y = groundY; p.vy = 0; }
+    // Giới hạn biên sân
+    if (p === p1) {
+      if (p.x < p.r) p.x = p.r;
+      if (p.x > 430) p.x = 430;
+    } else {
+      if (p.x < 470) p.x = 470;
+      if (p.x > 900 - p.r) p.x = 900 - p.r;
+    }
   });
 
-  // Tunnel Side Walls (Arched Green-Grey Brick)
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0x4a5d4e, roughness: 0.8 });
-  const leftWall = new THREE.Mesh(new THREE.BoxGeometry(1, 6, 20), wallMat);
-  leftWall.position.set(-4.5, 3, 0);
-  const rightWall = new THREE.Mesh(new THREE.BoxGeometry(1, 6, 20), wallMat);
-  rightWall.position.set(4.5, 3, 0);
+  // Ball Physics
+  ball.vy += 0.45; // Trọng lực bóng
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+  ball.vx *= 0.99; // Ma sát không khí
+
+  // Va chạm biên sân bóng
+  if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx *= -0.7; }
+  if (ball.x + ball.r > 900) { ball.x = 900 - ball.r; ball.vx *= -0.7; }
+  if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy *= -0.7; }
+
+  // Va chạm mặt đất
+  if (ball.y + ball.r > groundY + 20) {
+    ball.y = groundY + 20 - ball.r;
+    ball.vy *= -0.75;
+  }
+
+  // --- VA CHẠM CẦU THỦ & BÓNG ---
+  [p1, p2].forEach(p => {
+    let dx = ball.x - p.x;
+    let dy = ball.y - p.y;
+    let dist = Math.hypot(dx, dy);
+    let minDist = p.r + ball.r;
+
+    if (dist < minDist) {
+      let angle = Math.atan2(dy, dx);
+      let hitSpeed = Math.hypot(p.vx, p.vy) + 6;
+      ball.vx = Math.cos(angle) * hitSpeed + p.vx * 0.5;
+      ball.vy = Math.sin(angle) * hitSpeed + p.vy * 0.5;
+      
+      // Tăng năng lượng tuyệt chiêu
+      p.power = Math.min(100, p.power + 15);
+    }
+  });
+
+  // --- GHI BÀN (LUẬT LƯỚI & KHUNG THÀNH) ---
+  // Khung thành trái (x: 0-70, y: 260-410) -> P2 ghi bàn
+  if (ball.x - ball.r < 70 && ball.y > 250) {
+    p2.score++;
+    updateScoreUI();
+    resetPositions();
+  }
+  // Khung thành phải (x: 830-900, y: 260-410) -> P1 ghi bàn
+  if (ball.x + ball.r > 830 && ball.y > 250) {
+    p1.score++;
+    updateScoreUI();
+    resetPositions();
+  }
+
+  // Cập nhật thanh Power Bar UI
+  document.getElementById('p1Fill').style.width = p1.power + '%';
+  document.getElementById('p2Fill').style.width = p2.power + '%';
+}
+
+function updateScoreUI() {
+  document.getElementById('scoreP1').innerText = `${p1.score} - ${p2.score}`;
+  document.getElementById('scoreP2').innerText = `${p2.score} - ${p1.score}`;
+}
+
+// --- RENDER HỌA TIẾT ĐỒ HỌA 2D ---
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Vẽ Khán đài & Sân vận động nền
+  ctx.fillStyle = '#141e30';
+  ctx.fillRect(0, 0, canvas.width, groundY + 20);
+
+  // Vạch sân cỏ
+  ctx.fillStyle = '#2e7d32';
+  ctx.fillRect(0, groundY + 20, canvas.width, canvas.height - (groundY + 20));
   
-  // Ceiling
-  const ceil = new THREE.Mesh(new THREE.BoxGeometry(10, 1, 20), wallMat);
-  ceil.position.set(0, 6.5, 0);
+  // Vòng tròn giữa sân
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(450, groundY + 20, 70, Math.PI, 0, false);
+  ctx.stroke();
 
-  seg.add(leftWall, rightWall, ceil);
-  tunnelGroup.add(seg);
-  return seg;
+  // Khung thành trái & phải
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(0, 250, 70, 160);
+  ctx.fillRect(830, 250, 70, 160);
+
+  // Cột lưới khung thành
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(0, 250, 70, 160);
+  ctx.strokeRect(830, 250, 70, 160);
+
+  // Vẽ Cầu thủ 1 (Đầu to chân ngắn)
+  drawPlayer(p1);
+  // Vẽ Cầu thủ 2
+  drawPlayer(p2);
+
+  // Vẽ Quả bóng đá
+  ctx.save();
+  ctx.translate(ball.x, ball.y);
+  ctx.rotate(Date.now() * 0.003);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(0, 0, ball.r, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke();
+  // Họa tiết quả bóng
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 }
 
-let tunnelSegments = [];
-for (let i = 0; i < 6; i++) {
-  tunnelSegments.push(createTunnelSegment(-i * 20));
+function drawPlayer(p) {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+
+  // Thân áo nhỏ dưới đầu
+  ctx.fillStyle = p.color;
+  ctx.fillRect(-14, -5, 28, 35);
+  ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.strokeRect(-14, -5, 28, 35);
+
+  // Đôi giày / Chân
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(p.facing * 12, 35, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Đầu to đặc trưng Head Soccer
+  ctx.fillStyle = '#ffdbac'; // Màu da
+  ctx.beginPath();
+  ctx.arc(0, -35, p.r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 3; ctx.strokeStyle = '#222'; ctx.stroke();
+
+  // Mắt & Miệng biểu cảm
+  ctx.fillStyle = '#222';
+  ctx.beginPath();
+  ctx.arc(p.facing * 12, -42, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Nón / Tóc cầu thủ
+  ctx.fillStyle = p.hatColor;
+  ctx.beginPath();
+  ctx.arc(0, -45, p.r, Math.PI, 0, false);
+  ctx.fill();
+
+  ctx.restore();
 }
 
-// --- CHARACTER MODELS ---
-// Player (Jake)
-const playerGroup = new THREE.Group();
-const shirtMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
-const capMat = new THREE.MeshStandardMaterial({ color: 0xd32f2f });
-
-const pBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.3), shirtMat); pBody.position.y = 0.85;
-const pHead = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), skinMat); pHead.position.y = 1.35;
-const pCap = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.1, 0.38), capMat); pCap.position.set(0, 1.48, 0.02);
-
-// Hoverboard Mesh
-const boardMesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 1.4), new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x004466 }));
-boardMesh.position.y = 0.1;
-boardMesh.visible = false;
-
-playerGroup.add(pBody, pHead, pCap, boardMesh);
-scene.add(playerGroup);
-
-// Inspector & Dog
-const chaserGroup = new THREE.Group();
-const inspBody = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.8, 0.4), new THREE.MeshStandardMaterial({ color: 0xeeeeee })); inspBody.position.y = 0.9;
-const inspHead = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), skinMat); inspHead.position.y = 1.45;
-const dogMesh = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.35, 0.5), new THREE.MeshStandardMaterial({ color: 0x888888 })); dogMesh.position.set(0.6, 0.2, 0);
-
-chaserGroup.add(inspBody, inspHead, dogMesh);
-chaserGroup.position.set(0, 0, 1.8);
-scene.add(chaserGroup);
-
-// --- OBSTACLES & COINS DYNAMIC SYSTEM ---
-const obstacles = [];
-const coinsList = [];
-const powerupItems = [];
-
-function spawnObstacleCluster(zPos) {
-  const lane = [-1, 0, 1][Math.floor(Math.random() * 3)];
-  const type = Math.random();
-
-  if (type < 0.5) {
-    // Train (Cream/Orange)
-    const trainGroup = new THREE.Group();
-    trainGroup.position.set(laneX[lane + 1], 0, zPos);
-
-    const bodyGeo = new THREE.BoxGeometry(1.8, 2.4, 8);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe0d8c8, roughness: 0.4 });
-    const body = new THREE.Mesh(bodyGeo, bodyMat); body.position.y = 1.2;
-
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.82, 0.3, 8), new THREE.MeshStandardMaterial({ color: 0xff5500 }));
-    stripe.position.y = 0.8;
-
-    trainGroup.add(body, stripe);
-    trainGroup.userData = { type: 'TRAIN', box: new THREE.Box3() };
-    scene.add(trainGroup);
-    obstacles.push(trainGroup);
-  } else {
-    // Barrier
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.0, 0.2), new THREE.MeshStandardMaterial({ color: 0xd32f2f }));
-    bar.position.set(laneX[lane + 1], 0.5, zPos);
-    bar.userData = { type: 'BARRIER', box: new THREE.Box3() };
-    scene.add(bar);
-    obstacles.push(bar);
-  }
-
-  // Spawn Coins Trail
-  for (let c = 0; c < 5; c++) {
-    const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 16), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8 }));
-    coin.rotation.x = Math.PI / 2;
-    coin.position.set(laneX[lane + 1], 0.6, zPos - 3 - c * 1.2);
-    scene.add(coin);
-    coinsList.push(coin);
-  }
+// Loop
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
 }
 
-// --- CONTROLS ---
-window.addEventListener('keydown', (e) => {
-  if (gameState !== 'RUNNING') return;
-  if (e.key === 'ArrowLeft' || e.key === 'a') { if (currentLane > -1) currentLane--; }
-  if (e.key === 'ArrowRight' || e.key === 'd') { if (currentLane < 1) currentLane++; }
-  if ((e.key === 'ArrowUp' || e.key === 'w') && !isJumping) {
-    isJumping = true;
-    playerVelY = powerups.sneakers > 0 ? 0.22 : 0.16;
-  }
-  if (e.key === 'ArrowDown' || e.key === 's') {
-    isSliding = true; slideTimer = 0.6;
-    if (isJumping) playerVelY = -0.2;
-  }
-  if (e.key === ' ' || e.key === 'Spacebar') { activateBoard(); }
-});
-
-function activateBoard() {
-  if (boardsCount > 0 && !boardActive && gameState === 'RUNNING') {
-    boardsCount--;
-    boardActive = true;
-    boardTime = 8.0; // 8 seconds protection
-    boardMesh.visible = true;
-    document.getElementById('boardCountText').innerText = `VÁN TRƯỢT (x${boardsCount})`;
-  }
-}
-
-function startGame() {
-  gameState = 'RUNNING';
-  score = 0; coins = 0; runTime = 0; currentLane = 0;
-  playerPos = { x: 0, y: 0, z: 0 };
-  
-  document.getElementById('start-screen').classList.add('hidden');
-  document.getElementById('gameover-screen').classList.add('hidden');
-  
-  chaserGroup.position.set(0, 0, 1.8);
-  chaserGroup.visible = true;
-}
-
-function resetToMenu() {
-  gameState = 'START';
-  document.getElementById('start-screen').classList.remove('hidden');
-  document.getElementById('gameover-screen').classList.add('hidden');
-}
-
-// --- GAME LOOP ---
-const clock = new THREE.Clock();
-
-function animate() {
-  requestAnimationFrame(animate);
-  const delta = clock.getDelta();
-
-  if (gameState === 'RUNNING') {
-    runTime += delta;
-    score += Math.floor(delta * 60 * (powerups.mult2x > 0 ? 2 : 1));
-    document.getElementById('scoreDisplay').innerText = String(score).padStart(6, '0');
-    document.getElementById('coinDisplay').innerText = coins;
-
-    // 1-Second Disappear Chaser Mechanic
-    if (runTime >= 1.0 && chaserGroup.visible) {
-      chaserGroup.visible = false;
-    }
-
-    // Lane Smooth Movement
-    playerPos.x += (laneX[currentLane + 1] - playerPos.x) * 0.2;
-
-    // Jump / Gravity Physics
-    if (isJumping) {
-      playerPos.y += playerVelY;
-      playerVelY -= 0.008;
-      if (playerPos.y <= 0) { playerPos.y = 0; isJumping = false; }
-    }
-
-    playerGroup.position.set(playerPos.x, playerPos.y, playerPos.z);
-
-    // Update Tunnel Scrolling
-    tunnelSegments.forEach(seg => {
-      seg.position.z += 0.28;
-      if (seg.position.z > 10) seg.position.z -= 120;
-    });
-
-    // Spawn New Obstacles
-    if (Math.random() < 0.03 && obstacles.length < 8) {
-      spawnObstacleCluster(-40 - Math.random() * 20);
-    }
-
-    // Move & Collision Check Obstacles
-    const pBox = new THREE.Box3().setFromObject(pBody);
-
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-      const obs = obstacles[i];
-      obs.position.z += 0.28;
-
-      const oBox = new THREE.Box3().setFromObject(obs);
-      if (pBox.intersectsBox(oBox)) {
-        if (boardActive) {
-          // Board protects from crash!
-          boardActive = false;
-          boardMesh.visible = false;
-          scene.remove(obs);
-          obstacles.splice(i, 1);
-        } else {
-          // CRASH! Caught State
-          gameState = 'CAUGHT';
-          chaserGroup.position.set(playerPos.x, 0, playerPos.z + 0.8);
-          chaserGroup.visible = true;
-          
-          setTimeout(() => {
-            gameState = 'GAMEOVER';
-            document.getElementById('nbFinalScore').innerText = score;
-            document.getElementById('nbRunCoins').innerText = coins;
-            document.getElementById('nbTotalCoins').innerText = coins;
-            document.getElementById('gameover-screen').classList.remove('hidden');
-          }, 1200);
-        }
-      }
-
-      if (obs.position.z > 10) { scene.remove(obs); obstacles.splice(i, 1); }
-    }
-
-    // Coins Collection
-    for (let i = coinsList.length - 1; i >= 0; i--) {
-      const c = coinsList[i];
-      c.position.z += 0.28;
-      c.rotation.z += 0.05;
-
-      if (c.position.distanceTo(playerGroup.position) < 0.8) {
-        coins++;
-        scene.remove(c);
-        coinsList.splice(i, 1);
-      } else if (c.position.z > 10) {
-        scene.remove(c);
-        coinsList.splice(i, 1);
-      }
-    }
-  }
-
-  renderer.render(scene, camera);
-}
-
-animate();
+loop();
 </script>
 </body>
 </html>
 """
 
-components.html(SUBWAY_3D_HTML, height=580)
+components.html(HEAD_SOCCER_HTML, height=530)
